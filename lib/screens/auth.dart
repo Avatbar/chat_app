@@ -1,5 +1,10 @@
+import 'dart:io';
+
+import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+
+import '../widgets/user_image_picker.dart';
 
 final _firebase = FirebaseAuth.instance;
 
@@ -15,11 +20,36 @@ class _AuthScreenState extends State<AuthScreen> {
   var _isLogin = true;
   var _userEmail = '';
   var _userPassword = '';
+  File? _userImageFile;
 
   void _submit() async {
     final isValid = _formKey.currentState!.validate();
 
     if (!isValid) {
+      ScaffoldMessenger.of(context).clearSnackBars();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('Please enter valid credentials.'),
+          backgroundColor: Theme
+              .of(context)
+              .colorScheme
+              .error,
+        ),
+      );
+      return;
+    }
+
+    if (_userImageFile == null && !_isLogin) {
+      ScaffoldMessenger.of(context).clearSnackBars();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('Please pick an image.'),
+          backgroundColor: Theme
+              .of(context)
+              .colorScheme
+              .error,
+        ),
+      );
       return;
     }
 
@@ -32,12 +62,19 @@ class _AuthScreenState extends State<AuthScreen> {
         // Log user in
         final userCredentials = await _firebase.signInWithEmailAndPassword(
             email: _userEmail, password: _userPassword);
-        print(userCredentials);
       } else {
         // Sign user up
         final userCredentials = await _firebase.createUserWithEmailAndPassword(
             email: _userEmail, password: _userPassword);
-        print(userCredentials);
+
+        final storageRef = FirebaseStorage.instance
+            .ref()
+            .child('user_images')
+            .child('${userCredentials.user!.uid}.jpg');
+
+        await storageRef.putFile(_userImageFile!);
+        final imageUrl = await storageRef.getDownloadURL();
+        print(imageUrl);
       }
     } on FirebaseAuthException catch (error) {
       ScaffoldMessenger.of(context).clearSnackBars();
@@ -84,6 +121,9 @@ class _AuthScreenState extends State<AuthScreen> {
                         child: Column(
                           mainAxisSize: MainAxisSize.min,
                           children: [
+                          if (!_isLogin) UserImagePicker(imagePickFn: (File pickedImage) {
+                            _userImageFile = pickedImage;
+                          },),
                             TextFormField(
                               keyboardType: TextInputType.emailAddress,
                               autocorrect: false,
