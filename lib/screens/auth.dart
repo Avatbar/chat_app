@@ -21,6 +21,7 @@ class _AuthScreenState extends State<AuthScreen> {
   var _userEmail = '';
   var _userPassword = '';
   File? _userImageFile;
+  var _isAuthenticating = false;
 
   void _submit() async {
     final isValid = _formKey.currentState!.validate();
@@ -58,6 +59,9 @@ class _AuthScreenState extends State<AuthScreen> {
     print(_userPassword);
 
     try {
+      setState(() {
+        _isAuthenticating = true;
+      });
       if (_isLogin) {
         // Log user in
         final userCredentials = await _firebase.signInWithEmailAndPassword(
@@ -87,6 +91,9 @@ class _AuthScreenState extends State<AuthScreen> {
               .error,
         ),
       );
+      setState(() {
+        _isAuthenticating = false;
+      });
     }
   }
 
@@ -168,6 +175,9 @@ class _AuthScreenState extends State<AuthScreen> {
                               },
                             ),
                             const SizedBox(height: 12),
+                            if (_isAuthenticating)
+                              const CircularProgressIndicator(),
+                            if (!_isAuthenticating)
                             ElevatedButton(
                               onPressed: _submit,
                               style: ElevatedButton.styleFrom(
@@ -184,6 +194,7 @@ class _AuthScreenState extends State<AuthScreen> {
                               ),
                               child: Text(_isLogin ? 'Login' : 'Sign up'),
                             ),
+                            if (!_isAuthenticating)
                             TextButton(
                               onPressed: () {
                                 setState(() {
